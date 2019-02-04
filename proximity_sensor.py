@@ -1,6 +1,5 @@
 import smbus
 import time
-import datatime
 
 from gpiozero import LED
 
