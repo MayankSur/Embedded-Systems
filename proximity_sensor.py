@@ -22,9 +22,10 @@ while True:
 	data = bus.read_i2c_block_data(0x13,0x87,1)
 	data2 = bus.read_i2c_block_data(0x13,0x88,1)
 	
-	data = (256*data) + data2
-
 	value = int.from_bytes(data, 'big')
+	value2 = int.from_bytes(data2, 'big')
+	
+	value = (value*256)+value2
 	
 	print (value)
 	led.on()
