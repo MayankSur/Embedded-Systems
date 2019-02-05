@@ -14,13 +14,20 @@ bus = smbus.SMBus(1)
 bus.write_i2c_block_data(0x13,0x80,[0x07])
 
 
-
 while True:
 	led.off()
 	#Send the value and read x amount of bytes
-
-	data = bus.read_i2c_block_data(0x13,0x87,1)
-	data2 = bus.read_i2c_block_data(0x13,0x88,1)
+	
+	print ("Trying to fetch the values")
+	
+	#This is the method for using the proximity sensor, it's quite bad and going to be pretty much useless 
+	# data = bus.read_i2c_block_data(0x13,0x87,1)
+	# data2 = bus.read_i2c_block_data(0x13,0x88,1)
+	
+	# print ("Got the values")
+	
+	data = bus.read_i2c_block_data(0x13,0x85,1)
+	data2 = bus.read_i2c_block_data(0x13,0x86,1)
 	
 	value = int.from_bytes(data, 'big')
 	value2 = int.from_bytes(data2, 'big')
