@@ -97,9 +97,11 @@ def on_message(client, userdata, msg):
 		print("I think I published a sonic message")
 		
 	if str(msg.payload) == "b'get_data'":
-		payload = ultrasonic()
+		value = ultrasonic()
+		value2 = lightsensor()
+		payload = json.dumps({'lightsensor_value': value, 'ultrasonic_value': value2, 'time': time.strftime("%c")})	
 		message=client.publish("IC.embedded/ALphawolfSquadron",payload)
-		print("I think I published a total message")
+		print("Sent the payload")
 	else:
 		print (mqtt.error_string(error_code))
 

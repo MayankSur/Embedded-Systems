@@ -30,6 +30,7 @@ client.connect("test.mosquitto.org", 1883, 60)
 client.loop_start()
 
 while True:
+		time.sleep(4)
 		command = input('Enter a number: ')
 		
 		if command == '1':
@@ -44,4 +45,3 @@ while True:
 			client.loop_stop()
 			exit()
 			
-		time.sleep(10)
