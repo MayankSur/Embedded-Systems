@@ -85,7 +85,7 @@ def on_message(client, userdata, msg):
 		value = lightsensor()
 		time = datetime.datetime.now()
 		payload = json.dumps({'lightsensor_value': value, 'time': time.strftime("%c")})	
-		message=client.publish("IC.embedded/ALphawolfSquadron/recieve ",payload)
+		message=client.publish("IC.embedded/ALphawolfSquadron/recieve",payload)
 		print(mqtt.error_string(message.rc))
 		print("I think I published a data light message")
 		
