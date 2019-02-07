@@ -15,11 +15,14 @@ Address = 0x48
 # Port for the Light Sensor
 Address2 = 0x13
 
-def ultrasonic():
 #Sets the address pointer to config register to set up the ADC
 #To the spec that we want
-	bus.write_i2c_block_data(Address,0x1,[4,128])
 
+#Get the sensors up and running and wait for the a correct set-up
+bus.write_i2c_block_data(Address,0x1,[4,128])
+bus.write_i2c_block_data(Address2,0x80,[0x07])
+
+def ultrasonic():
 
 	#Send the value and read x amount of bytes
 
@@ -37,7 +40,6 @@ def lightsensor():
 
 	#Sets the address pointer to config register to set up the ADC
 	#To the spec that we want
-	bus.write_i2c_block_data(Address2,0x80,[0x07])
 	
 	#Send the value and read x amount of bytes
 	
@@ -77,7 +79,8 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, msg):
 	print(msg.topic+" "+str(msg.payload))
 	
-	if str(msg.payload) == "get_data_light":
+	print
+	if str(msg.payload) == "b'get_data_light'":
 		value = lightsensor()
 		time = datetime.datetime.now()
 		payload = json.dumps({'lightsensor_value': value, 'time': time.strftime("%c")})	
@@ -85,14 +88,14 @@ def on_message(client, userdata, msg):
 		print(mqtt.error_string(message.rc))
 		print("I think I published a data light message")
 		
-	if str(msg.payload) == "get_data_sonic":
+	if str(msg.payload) == "b'get_data_sonic'":
 		value = ultrasonic()
 		time = datetime.datetime.now()
 		payload = json.dumps({'ultrasonic_value': value, 'time': time.strftime("%c")})	
 		message=client.publish("IC.embedded/ALphawolfSquadron",payload)
 		print("I think I published a sonic message")
 		
-	if str(msg.payload) == "get_data":
+	if str(msg.payload) == "b'get_data'":
 		payload = ultrasonic()
 		message=client.publish("IC.embedded/ALphawolfSquadron",payload)
 		print("I think I published a total message")
