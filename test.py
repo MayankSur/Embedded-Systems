@@ -74,7 +74,7 @@ def on_connect(client, userdata, flags, rc):
     print("Connected with result code "+str(rc))
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
-    client.subscribe("IC.embedded/ALphawolfSquadron/#")
+    client.subscribe("IC.embedded/ALphawolfSquadron/send")
 
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
@@ -85,7 +85,7 @@ def on_message(client, userdata, msg):
 		value = lightsensor()
 		time = datetime.datetime.now()
 		payload = json.dumps({'lightsensor_value': value, 'time': time.strftime("%c")})	
-		message=client.publish("IC.embedded/ALphawolfSquadron",payload)
+		message=client.publish("IC.embedded/ALphawolfSquadron/recieve ",payload)
 		print(mqtt.error_string(message.rc))
 		print("I think I published a data light message")
 		
@@ -93,14 +93,14 @@ def on_message(client, userdata, msg):
 		value = ultrasonic()
 		time = datetime.datetime.now()
 		payload = json.dumps({'ultrasonic_value': value, 'time': time.strftime("%c")})	
-		message=client.publish("IC.embedded/ALphawolfSquadron",payload)
+		message=client.publish("IC.embedded/ALphawolfSquadron/recieve",payload)
 		print("I think I published a sonic message")
 		
 	if str(msg.payload) == "b'get_data'":
 		value = ultrasonic()
 		value2 = lightsensor()
 		payload = json.dumps({'lightsensor_value': value, 'ultrasonic_value': value2, 'time': time.strftime("%c")})	
-		message=client.publish("IC.embedded/ALphawolfSquadron",payload)
+		message=client.publish("IC.embedded/ALphawolfSquadron/recieve",payload)
 		print("Sent the payload")
 	else:
 		print (mqtt.error_string(error_code))

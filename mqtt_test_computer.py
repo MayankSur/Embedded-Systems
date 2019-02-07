@@ -7,7 +7,7 @@ def on_connect(client, userdata, flags, rc):
 
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
-    client.subscribe("IC.embedded/ALphawolfSquadron/#")
+    client.subscribe("IC.embedded/ALphawolfSquadron/recieve")
 
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
@@ -34,11 +34,11 @@ while True:
 		command = input('Enter a number: ')
 		
 		if command == '1':
-			message=client.publish("IC.embedded/ALphawolfSquadron","get_data_light")
+			message=client.publish("IC.embedded/ALphawolfSquadron/send","get_data_light")
 			print(mqtt.error_string(message.rc))
 			print("I think I published a message")
 		if command == '2':
-			message=client.publish("IC.embedded/ALphawolfSquadron","get_data_sonic")
+			message=client.publish("IC.embedded/ALphawolfSquadron/send","get_data_sonic")
 			print(mqtt.error_string(message.rc))
 			print("I think I published a message")
 		if command == 'q':
