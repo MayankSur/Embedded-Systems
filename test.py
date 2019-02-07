@@ -100,6 +100,7 @@ def on_message(client, userdata, msg):
 	if str(msg.payload) == "b'get_data'":
 		value = ultrasonic()
 		value2 = lightsensor()
+		time = datetime.datetime.now()
 		payload = json.dumps({'lightsensor_value': value, 'ultrasonic_value': value2, 'time': time.strftime("%c")})	
 		message=client.publish("IC.embedded/ALphawolfSquadron/recieve",payload)
 		print("Sent the payload")

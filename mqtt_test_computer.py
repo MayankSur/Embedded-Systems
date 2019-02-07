@@ -3,6 +3,9 @@ import time
 import json
 
 bottom_value = 0
+curr_ultra_value = 0
+curr_light_value = 0
+
 
 # The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
@@ -14,14 +17,25 @@ def on_connect(client, userdata, flags, rc):
 
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
-	print(msg.topic+" "+str(msg.payload))
+	topic=msg.topic
+	m_decode=str(msg.payload.decode("utf-8","ignore"))
+	#print("data Received type",type(m_decode))
+	#print("data Received",m_decode)
+	#print("Converting from Json to Object")
+	m_in=json.loads(m_decode) #decode json data
+	print(type(m_in))
 	
-	m_decode = str(msg.payload.decode("utf-8","ignore"))
-	m_in = json.loads(m_decode) 
-	json_size = len(m_in)
+	if (len(m_in) == 1):
+		bottom_value = m_in['ultrasonic_value']
+		print('\nCalibrated the system\n')
 	
-	print("The message was recieved and you got the payload\n" + m_in)
-	print('The size of json was ' + json_size)
+	print(m_in)
+	curr_ultra_value = int(m_in['ultrasonic_value'])
+	print('entered')
+	curr_light_value = int(m_in['lightsensor_value'])
+	print('entered')
+	
+	
 	
 
 client = mqtt.Client()
@@ -51,6 +65,10 @@ while True:
 			#print("I think I published a message")
 		if command == '3':
 			message=client.publish("IC.embedded/ALphawolfSquadron/send","get_empty")
+			#print(mqtt.error_string(message.rc))
+			#print("I think I published a message")
+		if command == '4':
+			message=client.publish("IC.embedded/ALphawolfSquadron/send","get_data")
 			#print(mqtt.error_string(message.rc))
 			#print("I think I published a message")
 		if command == 'q':
