@@ -20,16 +20,21 @@ class Window(Frame):
 		quitButton = Button(self, text="Quit", command=self.client_exit)
 		
 		# creating a button instance
-		getDistDataButton = Button(self, text="Get Data", command=self.client_exit)
+		getDistDataButton = Button(self, text="Get New Reading", command=self.client_exit)
 		
 		# creating a button instance
-		getLightDataButton = Button(self, text="Get Light Reading", command=self.client_exit)
-
+		getLightDataButton = Button(self, text="Get Most Recent Reading", command=self.client_exit)
+		
+		#creating the text output area
+		outputInfoArea = Label(self, text="test")
+		outputInfoArea.place(x=100,y=200)
+		#outputInfoArea.pack()
+		
 		# placing the button on my window
 		quitButton.place(x=300, y=250)
 		
 		getDistDataButton.place (x = 100, y =100)
-		getLightDataButton.place(x = 200, y =100)
+		getLightDataButton.place(x = 250, y =100)
 		
 		w = Label(self, text="Hello, world!")
 		w.pack()
@@ -38,6 +43,7 @@ class Window(Frame):
 		
 	def client_exit(self):
 			exit()
+	
 		
 root = Tk()
 root.geometry("400x300")
