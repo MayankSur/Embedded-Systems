@@ -1,7 +1,7 @@
 import smbus
 import time
 import datetime
-	
+import json
 import paho.mqtt.client as mqtt
 from gpiozero import LED
 
@@ -20,6 +20,7 @@ Address2 = 0x13
 
 #Get the sensors up and running and wait for the a correct set-up
 bus.write_i2c_block_data(Address,0x1,[4,128])
+
 bus.write_i2c_block_data(Address2,0x80,[0x07])
 
 def ultrasonic():
