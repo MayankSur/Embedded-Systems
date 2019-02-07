@@ -26,11 +26,15 @@ class Window(Frame):
 		self.getLightDataButton = Button(self, text="Get Most Recent Reading", command=self.fakeTextUpdate2)
 		
 		#creating the text output area
+		self.dataSectionHeader=Label(self, text = "Data Reading")
+		self.dataSectionHeader.place(x=50,y=100)
+		self.timeLabel=Label(self,text="Time: ")
+		self.timeLabel.place(x=50,y=120)
+		self.readingLabel=Label(self,text="Reading: ")
+		self.readingLabel.place(x=50,y=140)
+		self.valueLabel=Label(self,text="Value: ")
+		self.valueLabel.place(x=50,y=160)
 		
-		#self.outText = StringVar()
-		#self.outText.set("Initial Value")
-		self.dataLabel = Label(self, text="Initial Values for Test")
-		self.dataLabel.place(x=100,y=200)
 		
 		# placing the button on my window
 		self.quitButton.place(x=300, y=250)
@@ -46,9 +50,13 @@ class Window(Frame):
 	def client_exit(self):
 			exit()
 	def fakeTextUpdate1(self):
-			self.dataLabel.config(text="Fake Reading. Time = -1, Sensor = pi, Bin is a lie")
+			self.timeLabel.config(text="Time: Some Fake Value")
+			self.readingLabel.config(text="Reading: Some Fake Integer")
+			self.valueLabel.config(text="Value: Bin is fake")
 	def fakeTextUpdate2(self):
-			self.dataLabel.config(text="Fake Reading. Time = e, Sensor = -2, Bin is president")
+			self.timeLabel.config(text="Time: Some Other Fake Value")
+			self.readingLabel.config(text="Reading: Some Other Fake Integer")
+			self.valueLabel.config(text="Value: Bin is really fake")
 		
 root = Tk()
 root.geometry("400x300")
