@@ -1,5 +1,8 @@
 import paho.mqtt.client as mqtt
 import time
+import json
+
+bottom_value = 0
 
 # The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
@@ -11,9 +14,16 @@ def on_connect(client, userdata, flags, rc):
 
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
-	print(msg.topic+" "+str(msg.payload))
+	#print(msg.topic+" "+str(msg.payload))
 	
-	print("The message was recieved and you got the payload\n" +str(msg.payload))
+	incoming_json = json.loads(msg) 
+	json_size = len(incoming_json)
+	
+	if (json_size == 1):
+		bottom_value = incoming_json['ultrasonic_value']
+		print('Updated the bottom value')
+	else:
+		print("The message was recieved and you got the payload\n" +str(msg.payload))
 	
 
 client = mqtt.Client()
@@ -39,6 +49,10 @@ while True:
 			print("I think I published a message")
 		if command == '2':
 			message=client.publish("IC.embedded/ALphawolfSquadron/send","get_data_sonic")
+			print(mqtt.error_string(message.rc))
+			print("I think I published a message")
+		if command == '3':
+			message=client.publish("IC.embedded/ALphawolfSquadron/send","get_empty")
 			print(mqtt.error_string(message.rc))
 			print("I think I published a message")
 		if command == 'q':

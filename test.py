@@ -95,11 +95,17 @@ def on_message(client, userdata, msg):
 		payload = json.dumps({'ultrasonic_value': value, 'time': time.strftime("%c")})	
 		message=client.publish("IC.embedded/ALphawolfSquadron/recieve",payload)
 		print("I think I published a sonic message")
-		
+	
 	if str(msg.payload) == "b'get_data'":
 		value = ultrasonic()
 		value2 = lightsensor()
 		payload = json.dumps({'lightsensor_value': value, 'ultrasonic_value': value2, 'time': time.strftime("%c")})	
+		message=client.publish("IC.embedded/ALphawolfSquadron/recieve",payload)
+		print("Sent the payload")
+
+	if str(msg.payload) == "b'get_empty'":
+		value = ultrasonic()
+		payload = json.dumps({'ultrasonic_value': value2})	
 		message=client.publish("IC.embedded/ALphawolfSquadron/recieve",payload)
 		print("Sent the payload")
 	else:
