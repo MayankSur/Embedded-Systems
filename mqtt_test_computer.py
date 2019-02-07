@@ -1,4 +1,5 @@
 import paho.mqtt.client as mqtt
+import time
 
 # The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
@@ -23,5 +24,21 @@ client.connect("test.mosquitto.org", 1883, 60)
 # handles reconnecting.
 # Other loop*() functions are available that give a threaded interface and a
 # manual interface.
-client.loop_forever()
+client.loop_start()
 
+while True:
+		command = input('Enter a number: ')
+		
+		if command == '1':
+			message=client.publish("IC.embedded/ALphawolfSquadron","get_data_light")
+			print(mqtt.error_string(message.rc))
+			print("I think I published a message")
+		if command == '2':
+			message=client.publish("IC.embedded/ALphawolfSquadron","get_data_sonic")
+			print(mqtt.error_string(message.rc))
+			print("I think I published a message")
+		if command == 'q':
+			client.loop_stop()
+			exit()
+			
+		time.sleep(4)
