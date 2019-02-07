@@ -80,6 +80,7 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, msg):
 	print(msg.topic+" "+str(msg.payload))
 	
+
 	print
 	if str(msg.payload) == "b'get_data_light'":
 		value = lightsensor()
@@ -105,7 +106,7 @@ def on_message(client, userdata, msg):
 
 	if str(msg.payload) == "b'get_empty'":
 		value = ultrasonic()
-		payload = json.dumps({'ultrasonic_value': value2})	
+		payload = json.dumps({'ultrasonic_value': value})	
 		message=client.publish("IC.embedded/ALphawolfSquadron/recieve",payload)
 		print("Sent the payload")
 	else:

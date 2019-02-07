@@ -14,16 +14,14 @@ def on_connect(client, userdata, flags, rc):
 
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
-	#print(msg.topic+" "+str(msg.payload))
+	print(msg.topic+" "+str(msg.payload))
 	
-	incoming_json = json.loads(msg) 
-	json_size = len(incoming_json)
+	m_decode = str(msg.payload.decode("utf-8","ignore"))
+	m_in = json.loads(m_decode) 
+	json_size = len(m_in)
 	
-	if (json_size == 1):
-		bottom_value = incoming_json['ultrasonic_value']
-		print('Updated the bottom value')
-	else:
-		print("The message was recieved and you got the payload\n" +str(msg.payload))
+	print("The message was recieved and you got the payload\n" + m_in)
+	print('The size of json was ' + json_size)
 	
 
 client = mqtt.Client()
@@ -45,16 +43,16 @@ while True:
 		
 		if command == '1':
 			message=client.publish("IC.embedded/ALphawolfSquadron/send","get_data_light")
-			print(mqtt.error_string(message.rc))
-			print("I think I published a message")
+			#print(mqtt.error_string(message.rc))
+			#print("I think I published a message")
 		if command == '2':
 			message=client.publish("IC.embedded/ALphawolfSquadron/send","get_data_sonic")
-			print(mqtt.error_string(message.rc))
-			print("I think I published a message")
+			#print(mqtt.error_string(message.rc))
+			#print("I think I published a message")
 		if command == '3':
 			message=client.publish("IC.embedded/ALphawolfSquadron/send","get_empty")
-			print(mqtt.error_string(message.rc))
-			print("I think I published a message")
+			#print(mqtt.error_string(message.rc))
+			#print("I think I published a message")
 		if command == 'q':
 			client.loop_stop()
 			exit()
