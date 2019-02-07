@@ -77,7 +77,7 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, msg):
 	print(msg.topic+" "+str(msg.payload))
 	
-	if (msg.payload) == "get_data_light":
+	if str(msg.payload) == "get_data_light":
 		value = lightsensor()
 		time = datetime.datetime.now()
 		payload = json.dumps({'lightsensor_value': value, 'time': time.strftime("%c")})	
@@ -85,14 +85,14 @@ def on_message(client, userdata, msg):
 		print(mqtt.error_string(message.rc))
 		print("I think I published a data light message")
 		
-	if (msg.payload) == "get_data_sonic":
+	if str(msg.payload) == "get_data_sonic":
 		value = ultrasonic()
 		time = datetime.datetime.now()
 		payload = json.dumps({'ultrasonic_value': value, 'time': time.strftime("%c")})	
 		message=client.publish("IC.embedded/ALphawolfSquadron",payload)
 		print("I think I published a sonic message")
 		
-	if (msg.payload) == "get_data":
+	if str(msg.payload) == "get_data":
 		payload = ultrasonic()
 		message=client.publish("IC.embedded/ALphawolfSquadron",payload)
 		print("I think I published a total message")
