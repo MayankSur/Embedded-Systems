@@ -14,7 +14,6 @@ Address = 0x48 # Port ADC
 bus.write_i2c_block_data(0x48,0x1,[4,128])
 
 
-
 while True:
 	led.off()
 	#Send the value and read x amount of bytes
