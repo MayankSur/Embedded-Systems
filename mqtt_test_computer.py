@@ -13,7 +13,7 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, msg):
 	print(msg.topic+" "+str(msg.payload))
 	
-	print("The message was recieved and you got the payload\n" "+str(msg.payload))
+	print("The message was recieved and you got the payload\n" +str(msg.payload))
 	
 
 client = mqtt.Client()
