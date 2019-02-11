@@ -81,7 +81,7 @@ def on_message(client, userdata, msg):
 	print(msg.topic+" "+str(msg.payload))
 	
 
-	print
+	
 	if str(msg.payload) == "b'get_data_light'":
 		value = lightsensor()
 		time = datetime.datetime.now()
@@ -110,6 +110,9 @@ def on_message(client, userdata, msg):
 		payload = json.dumps({'ultrasonic_value': value})	
 		message=client.publish("IC.embedded/ALphawolfSquadron/recieve",payload)
 		print("Sent the payload")
+		led.on()
+		time.sleep(2)
+		led.off()
 	else:
 		print (mqtt.error_string(error_code))
 
