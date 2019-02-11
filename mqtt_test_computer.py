@@ -42,6 +42,8 @@ class Window(Frame):
 		self.readingLabel.place(x=50,y=140)
 		self.valueLabel=Label(self,text="Value: ")
 		self.valueLabel.place(x=50,y=160)
+		self.qualitativeCapacity=Label(self,text="Bin is n/a")
+		self.qualitativeCapacity.place(x=50,y=180)
 		
 		
 		# placing the button on my window
@@ -60,6 +62,7 @@ class Window(Frame):
 		global curr_light_value
 		global curr_ultra_value
 		global curr_time
+		global bottom_value
 		message=client.publish("IC.embedded/ALphawolfSquadron/send","get_data")
 		time.sleep(2)
 		print('Changed', curr_ultra_value)
@@ -67,9 +70,27 @@ class Window(Frame):
 		self.timeLabel.config(text="Time: " + curr_time)
 		self.readingLabel.config(text="Reading-Light: " + str(curr_light_value))
 		self.valueLabel.config(text="Reading-Ultra: " + str(curr_ultra_value))
+		print("Bottom value is ",bottom_value," Curr ultra is ",curr_ultra_value)
+		scaled_val = curr_ultra_value/bottom_value
+		print("Scaled value is ", scaled_val)
+		if scaled_val>1:
+			self.qualitativeCapacity.config(text="Bin is so empty it broke the sensor")
+		elif (scaled_val<=1) and (scaled_val>0.75):
+			self.qualitativeCapacity.config(text="Bin is less than 25% full")
+		elif (scaled_val<=0.75)and(scaled_val>0.5):
+			self.qualitativeCapacity.config(text="Bin is less than 50% full")
+		elif (scaled_val<=0.5)and(scaled_val >0.25):
+			self.qualitativeCapacity.config(text="Bin is less than 75% full")
+		elif (scaled_val<=0.25) and (scaled_val>0.1):
+			self.qualitativeCapacity.config(text="Bin is less than 90% full")
+		elif (scaled_val<=0.1) and (scaled_val>0):
+			self.qualitativeCapacity.config(text="Bin is full")
+		else:
+			self.qualitativeCapacity.config(text="I have no idea how you would get this error")
 	def calibrate(self):
 			message=client.publish("IC.embedded/ALphawolfSquadron/send","get_empty")
 			messagebox.showinfo("tk", "RE-CALIBRATION COMPLETE")
+			
 		
 	
 
@@ -87,6 +108,7 @@ def on_message(client, userdata, msg):
 	global curr_light_value
 	global curr_ultra_value
 	global curr_time
+	global bottom_value
 	topic=msg.topic
 	m_decode=str(msg.payload.decode("utf-8","ignore"))
 	#print("data Received type",type(m_decode))
@@ -96,8 +118,9 @@ def on_message(client, userdata, msg):
 	print(type(m_in))
 	
 	if (len(m_in) == 1):
-		bottom_value = m_in['ultrasonic_value']
+		bottom_value = int (m_in['ultrasonic_value'])
 		print('\nCalibrated the system\n')
+		print('\nThe new bottom value is ',bottom_value)
 	
 	print(m_in)
 	curr_ultra_value = int(m_in['ultrasonic_value'])
