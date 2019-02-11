@@ -44,6 +44,8 @@ class Window(Frame):
 		self.valueLabel.place(x=50,y=160)
 		self.qualitativeCapacity=Label(self,text="Bin is n/a")
 		self.qualitativeCapacity.place(x=50,y=180)
+		self.lightQualitative=Label(self,text="Bin state is unknown")
+		self.lightQualitative.place(x=50,y=200)
 		
 		
 		# placing the button on my window
@@ -87,6 +89,10 @@ class Window(Frame):
 			self.qualitativeCapacity.config(text="Bin is full")
 		else:
 			self.qualitativeCapacity.config(text="I have no idea how you would get this error")
+		if curr_light_value>100:
+			self.lightQualitative.config(text="Bin is open, capacity may be wrong")
+		else:
+			self.lightQualitative.config(text="Bin is closed")
 	def calibrate(self):
 			message=client.publish("IC.embedded/ALphawolfSquadron/send","get_empty")
 			messagebox.showinfo("tk", "RE-CALIBRATION COMPLETE")
