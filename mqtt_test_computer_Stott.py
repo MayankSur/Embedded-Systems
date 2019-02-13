@@ -5,6 +5,7 @@ from tkinter import *
 
 from tkinter import messagebox
 
+#Globals for ease of use
 bottom_value = 0
 curr_ultra_value = 0
 curr_light_value = 0
@@ -17,7 +18,7 @@ class Window(Frame):
 		self.master = master
 		#self.init_window()
 
-	#def init_window(self):
+	
 		# changing the title of our master widget      
 		self.master.title("LitterRate Desktop Application")
 
@@ -53,31 +54,31 @@ class Window(Frame):
 		
 		self.getDistDataButton.place (x = 0, y =0)
 		self.getLightDataButton.place(x = 250, y =0)
-		
-		#self.w = Label(self, text="Hello, world!")
-		#self.w.pack()
-		
-	
+	#function to run when quit button pressed		
 	def client_exit(self):
 			exit()
+	#function run when button "Get New Reading" is pressed
 	def Update1(self):
+		#Globals containing values from data sent from broker
 		global curr_light_value
 		global curr_ultra_value
 		global curr_time
 		global bottom_value
+		#publish message to broker asking for data
 		message=client.publish("IC.embedded/ALphawolfSquadron/send","get_data")
-		time.sleep(2)
 		print('Changed', curr_ultra_value)
 		print('Changed', curr_light_value)
+		#Update labels
 		self.timeLabel.config(text="Time: " + curr_time)
 		self.readingLabel.config(text="Reading-Light: " + str(curr_light_value))
 		self.valueLabel.config(text="Reading-Ultra: " + str(curr_ultra_value))
 		print("Bottom value is ",bottom_value," Curr ultra is ",curr_ultra_value)
 		scaled_val = curr_ultra_value/bottom_value
 		print("Scaled value is ", scaled_val)
-		if scaled_val>1:
+		#If only python had switch statements
+		if scaled_val>1.1: #So in theory, we want this as 1.0, however the sensor has fluctuations
 			self.qualitativeCapacity.config(text="Bin is so empty it broke the sensor")
-		elif (scaled_val<=1) and (scaled_val>0.75):
+		elif (scaled_val<=1.1) and (scaled_val>0.75):
 			self.qualitativeCapacity.config(text="Bin is less than 25% full")
 		elif (scaled_val<=0.75)and(scaled_val>0.5):
 			self.qualitativeCapacity.config(text="Bin is less than 50% full")
@@ -154,28 +155,4 @@ root = Tk()
 root.geometry("400x300")
 app = Window(root)
 root.mainloop()
-
-# while True:
-		# time.sleep(4)
-		# command = input('Enter a number: ')
-		
-		# if command == '1':
-			# message=client.publish("IC.embedded/ALphawolfSquadron/send","get_data_light")
-			# #print(mqtt.error_string(message.rc))
-			# #print("I think I published a message")
-		# if command == '2':
-			# message=client.publish("IC.embedded/ALphawolfSquadron/send","get_data_sonic")
-			# #print(mqtt.error_string(message.rc))
-			# #print("I think I published a message")
-		# if command == '3':
-			# message=client.publish("IC.embedded/ALphawolfSquadron/send","get_empty")
-			# #print(mqtt.error_string(message.rc))
-			# #print("I think I published a message")
-		# if command == '4':
-			# message=client.publish("IC.embedded/ALphawolfSquadron/send","get_data")
-			# #print(mqtt.error_string(message.rc))
-			# #print("I think I published a message")
-		# if command == 'q':
-			# client.loop_stop()
-			# exit()
 

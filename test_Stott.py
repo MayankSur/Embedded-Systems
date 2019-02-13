@@ -80,8 +80,10 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, msg):
 	print(msg.topic+" "+str(msg.payload))
 	
-
-	
+	#The client can send 4 messages to the pi
+	#It can ask for just the sonic reading, just the light, reading, or everything
+	#We also have a calibration / setup message, this doesn't do much different
+	#It is essentiall the same as the sonic version, but we keep it separated, mainly for initial setup.
 	if str(msg.payload) == "b'get_data_light'":
 		value = lightsensor()
 		time = datetime.datetime.now()
