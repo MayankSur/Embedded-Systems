@@ -125,6 +125,15 @@ void motor_pos(){
 Thread incoming_message_thread;
 
 //Initialising a new Serial Class to deal with inputs
+
+//Character input buffer
+char Buffer[20];
+int buffer_index = 0;
+
+//New Key MUTEX Variable and NewKey variable
+volatile uint64_t newKey = 0;
+Mutex newkey_mutex;
+
 RawSerial pc(SERIAL_TX, SERIAL_RX);
 Queue<void, 8> inCharQ;
 
@@ -140,6 +149,33 @@ void incoming_message(){
         uint8_t newChar = (uint8_t)newEvent.value.p;
         //Used to test if the character inputted was working
        // makeMessage(5, newChar);
+       
+       
+       //Need to deal with the new line character
+       // Indicates end of commands
+       if (newChar == '\r'){
+            Buffer[buffer_index] = '\0';
+           }
+           
+        //Adding the character to the array if it's not a new Line 
+       Buffer[buffer_index] = newChar;
+       
+       switch(Buffer[0]){
+            case 'K':
+                newkey_mutex.lock();
+                sscanf(Buffer, "K%x", &newKey);
+                //Print the whole Key - since it's 32 bits each so send in two bits 
+                makeMessage(6,newKey >> 32);
+                makeMessage(7,newKey);
+                newkey_mutex.unlock();
+                break;
+            case 'T':
+                makeMessage(5, newChar);
+                break;
+        
+        
+        }
+       
 
     }
 }
@@ -181,6 +217,15 @@ void bitcoin_gen(){
     
  //Start the while loop
     while(1){
+     // Need to use Mutex to protect the update of the key   
+    
+    if (*key != newKey){
+        newkey_mutex.lock();
+        *key = newKey;
+        newkey_mutex.unlock();
+        }
+        
+        
     // Instanciate an object
     SHA256::computeHash(&hash[0],&sequence[0],sizeof(sequence));
     //Searching for a nonce
@@ -254,6 +299,12 @@ void output_message(){
                 break;
             case 5:
                 pc.printf("New Character inputted: %c\n\r", o_message->data);
+                break;
+            case 6:
+                pc.printf("New Key: %x", o_message->data);
+                break;
+            case 7:
+                pc.printf("%x\n\r", o_message->data);
                 break;
             default:
                 pc.printf("======================Unexpected Input!====================");
