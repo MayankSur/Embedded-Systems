@@ -67,11 +67,53 @@ void bitcoin_gen();
 void makeMessage(uint8_t code, uint32_t data);
 void output_message();
 
+
+Thread incoming_message_thread(osPriorityNormal, 1024);;
+Thread bitcoin_thread(osPriorityNormal, 1024);;
+Thread recieve_message_t (osPriorityNormal, 1024);;
+Thread motorCtrlT(osPriorityNormal, 1024);
+
+
 //Declaring the structure for messages
 typedef struct {
   uint8_t    code; /* AD result of measured voltage */
   uint32_t data; /* A counter value               */
 } message_t;
+
+//Start to design the mailbox
+Mail<message_t, 16> out_message;
+
+
+//Character input buffer
+char Buffer[20];
+int buffer_index = 0;
+
+//New Key MUTEX Variable and NewKey variable
+volatile uint64_t newKey = 0;
+Mutex newkey_mutex;
+
+RawSerial pc(SERIAL_TX, SERIAL_RX);
+Queue<void, 8> inCharQ;
+
+
+
+
+////////////Controling the motor PWM ACTIVATE ////////////////
+
+//Define a PWMOut Class
+PwmOut motor(PWMpin);
+
+volatile int motor_position = 0;
+uint8_t previous_state = 0 ;
+int velocity = 0;
+int lastPosition = 0;
+uint32_t orState = 0;
+
+
+//////////////////////////////////////////////////////////////
+
+
+
 
 //Set a given drive state
 void motorOut(int8_t driveState){
@@ -111,31 +153,57 @@ int8_t motorHome() {
     return readRotorState();
 }
 
+//Upgrade motor_pos to work for the Motor ISR 
 void motor_pos(){
     //Base position
-    int8_t orState = 0;
     int8_t intState = readRotorState();
     motorOut((intState-orState+lead+6)%6); //+6 to make sure the remainder is positive
     
+    //Cases for comparing values from 0-6 or 
+    if (intState - previous_state == 5) motor_position--;
+    else if (intState - previous_state == -5) motor_position++;
+    else motor_position += (intState - previous_state);
+    previous_state = intState;
 }
+
+void motorCtrlTick(){
+    //Sets a signal for the thread
+    motorCtrlT.signal_set(0x1);
+    }
+
+
+void motorCtrl(){
+    //Creates a ticker to be used to triggere interrupts in a timed interval
+    Ticker motorCtrlTicker;
+    motorCtrlTicker.attach_us(&motorCtrlTick, 100000);
+    //Counter for the 10 iterations
+    int i = 0;
+    while(1){
+        motorCtrlT.signal_wait(0x1);
+        
+        //Potential may need to use critical region for this calculation
+        
+       // //putMessage(4, velocity);
+        if(i < 10){
+            i++;
+        }else{
+            i = 0;
+            //calculation for velocity + Critcal Section used since the value of motor position can change due to an intterupt
+            core_util_critical_section_enter();
+            velocity = (motor_position - lastPosition)*10;
+            core_util_critical_section_exit();
+            //Outputs the velocity and motor position every 10 iterations 
+            makeMessage(9, velocity);
+            makeMessage(8, motor_position);
+        }
+        
+        lastPosition = motor_position;
+        }
+    }
 
 
 /////////////////////// EVERYTHING TO DO WITH INPUT ////////////
 
-Thread incoming_message_thread;
-
-//Initialising a new Serial Class to deal with inputs
-
-//Character input buffer
-char Buffer[20];
-int buffer_index = 0;
-
-//New Key MUTEX Variable and NewKey variable
-volatile uint64_t newKey = 0;
-Mutex newkey_mutex;
-
-RawSerial pc(SERIAL_TX, SERIAL_RX);
-Queue<void, 8> inCharQ;
 
 void serialISR(){
  uint8_t newChar = pc.getc();
@@ -163,7 +231,7 @@ void incoming_message(){
        switch(Buffer[0]){
             case 'K':
                 newkey_mutex.lock();
-                sscanf(Buffer, "K%x", &newKey);
+                sscanf(Buffer, "K%x", newKey);
                 //Print the whole Key - since it's 32 bits each so send in two bits 
                 makeMessage(6,newKey >> 32);
                 makeMessage(7,newKey);
@@ -183,8 +251,6 @@ void incoming_message(){
 
 /////////////////////// EVERYTHING TO DO WITH BITCOIN MINING ////////////
 
-//Creating a new thread for the bitcoin function
-Thread bitcoin_thread;
 
 //Variables needed for the BitCoin
 
@@ -260,12 +326,6 @@ void bitcoin_gen(){
 
 
 /////////////////////// EVERYTHING TO DO WITH OUTPUT MESSAGES ////////////
-//Start to design the mailbox
-Mail<message_t, 16> out_message;
-
-
-//Create a thread to output messages
-Thread recieve_message_t;
 
 
 //Create a function that allocates space for a message on the mail box
@@ -306,6 +366,12 @@ void output_message(){
             case 7:
                 pc.printf("%x\n\r", o_message->data);
                 break;
+            case 8:
+                pc.printf("Motor Position%u\n\r", motor_position);
+                break;
+            case 9:
+                pc.printf("Motor Velocity%u\n\r", o_message->data);
+                break;
             default:
                 pc.printf("======================Unexpected Input!====================");
                     break;
@@ -320,10 +386,8 @@ void output_message(){
     
 //Main
 int main() {
-    int8_t orState = 0;    //Rotot offset at motor state 0
+
     
-    //Initialise the serial port
-    //Serial pc(SERIAL_TX, SERIAL_RX);
     makeMessage(0, 0);
     //Run the motor synchronisation
     orState = motorHome();
@@ -344,10 +408,14 @@ int main() {
     
     pc.attach(&serialISR);
     
-    incoming_message_thread.start(incoming_message);
-    bitcoin_thread.start(bitcoin_gen);
+    //incoming_message_thread.start(incoming_message);
+//    bitcoin_thread.start(bitcoin_gen);
     recieve_message_t.start(output_message);
+    motorCtrlT.start(motorCtrl);
     
+    motor.period_ms(2);
+    motor.pulsewidth_ms(2);
+
     
 }
 
