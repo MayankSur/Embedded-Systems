@@ -44,7 +44,7 @@ const int8_t stateMap[] = {0x07,0x05,0x03,0x04,0x01,0x00,0x02,0x07};
 //const int8_t stateMap[] = {0x07,0x01,0x03,0x02,0x05,0x00,0x04,0x07}; //Alternative if phase order of input or drive is reversed
 
 //Phase lead to make motor spin
-const int8_t lead = 2;  //2 for forwards, -2 for backwards
+int8_t lead = 2;  //2 for forwards, -2 for backwards
 
 //Status LED
 DigitalOut led1(LED1);
@@ -64,13 +64,13 @@ DigitalOut L3H(L3Hpin);
 
 //Declare all the functions being made
 void bitcoin_gen();
-void makeMessage(uint8_t code, uint32_t data);
+void makeMessage(uint8_t code, int32_t data);
 void output_message();
 
-
-Thread incoming_message_thread(osPriorityNormal, 1024);;
-Thread bitcoin_thread(osPriorityNormal, 1024);;
-Thread recieve_message_t (osPriorityNormal, 1024);;
+//Check these priorities and write them in report
+Thread incoming_message_thread(osPriorityAboveNormal, 1024);;
+Thread bitcoin_thread(osPriorityBelowNormal, 1024);;
+Thread recieve_message_t (osPriorityAboveNormal, 1024);;
 Thread motorCtrlT(osPriorityNormal, 1024);
 
 
@@ -84,16 +84,6 @@ typedef struct {
 Mail<message_t, 16> out_message;
 
 
-//Character input buffer
-char Buffer[20];
-int buffer_index = 0;
-
-//New Key MUTEX Variable and NewKey variable
-volatile uint64_t newKey = 0;
-Mutex newkey_mutex;
-
-RawSerial pc(SERIAL_TX, SERIAL_RX);
-Queue<void, 8> inCharQ;
 //Value for speed max to be set via input
 //value is abc.c, needs to be a float
 volatile float newVelocity = 0; //10 times the desired value
@@ -104,17 +94,26 @@ volatile float newVelocity = 0; //10 times the desired value
 //Define a PWMOut Class
 PwmOut motor(PWMpin);
 
-volatile int motor_position = 0;
+int motor_position = 0;
 uint8_t previous_state = 0 ;
 int velocity = 0;
 int lastPosition = 0;
 uint32_t orState = 0;
 
+int pwm = 2000;
+float pwm_width = 2000;
+
+
+//These need to be set by the user
+float rotations;
+float speedMaxInt = 1000;
+
+uint8_t k_ps = 15;
+float e_s;
+float torque;
+
 
 //////////////////////////////////////////////////////////////
-
-
-
 
 //Set a given drive state
 void motorOut(int8_t driveState){
@@ -154,7 +153,7 @@ int8_t motorHome() {
     return readRotorState();
 }
 
-//Upgrade motor_pos to work for the Motor ISR 
+ //Upgrade motor_pos to work for the Motor ISR 
 void motor_pos(){
     //Base position
     int8_t intState = readRotorState();
@@ -195,8 +194,27 @@ void motorCtrl(){
             core_util_critical_section_exit();
             //Outputs the velocity and motor position every 10 iterations 
             makeMessage(9, velocity);
+            if (velocity == 0){
+                pwm_width = 2000;
+                }
             makeMessage(8, motor_position);
+        //Needs to be done last
         }
+        
+        
+        //Set e_s then set kp then torque
+        e_s = speedMaxInt - abs(velocity);
+        torque = (k_ps* e_s);
+                
+        //Check for positive/negative lead
+        
+        if (torque <0) {lead = -2;}
+        else {lead =2;}
+        
+        //Sets the value for pwm_width based on the 
+        if (torque > 1) pwm_width = 2000;
+        if (torque < -1) pwm_width = 2000; 
+        else  pwm_width = abs((2000*torque));
         
         lastPosition = motor_position;
         }
@@ -206,49 +224,81 @@ void motorCtrl(){
 /////////////////////// EVERYTHING TO DO WITH INPUT ////////////
 
 
+//Character input buffer
+char Buffer[20];
+int buffer_index = 0;
+
+RawSerial pc(SERIAL_TX, SERIAL_RX);
+Queue<void, 8> inCharQ;
+
+//New Key MUTEX Variable and NewKey variable
+uint64_t newKey = 0;
+Mutex newkey_mutex;
+
+
 void serialISR(){
  uint8_t newChar = pc.getc();
  inCharQ.put((void*)newChar);
 }
 
 void incoming_message(){
+    //Message to Start Input Queue
     makeMessage(4, 0);
     while(1){
+        //Collects the Input
         osEvent newEvent = inCharQ.get();
         uint8_t newChar = (uint8_t)newEvent.value.p;
-        //Used to test if the character inputted was working
-       // makeMessage(5, newChar);
-       
+
+        //Checks for overflow
+        
+        if (buffer_index > 20){
+            buffer_index =0;
+        }
+        else{
+           Buffer[buffer_index] = newChar;
+            buffer_index++;
+       }
+
        
        //Need to deal with the new line character
        // Indicates end of commands
        if (newChar == '\r'){
             Buffer[buffer_index] = '\0';
-           }
+            //Reset for the next command
            
-        //Adding the character to the array if it's not a new Line 
-       Buffer[buffer_index] = newChar;
-       
-       switch(Buffer[0]){
-            case 'K':
-                newkey_mutex.lock();
-                sscanf(Buffer, "K%x", newKey);
-                //Print the whole Key - since it's 32 bits each so send in two bits 
-                makeMessage(6,newKey >> 32);
-                makeMessage(7,newKey);
-                newkey_mutex.unlock();
-                break;
-            case 'T':
-                makeMessage(5, newChar);
-                break;
-			case 'V':
-				//V\d{1,3}(\.\d)?
-                //matches V, followed by 1-3 digits, followed by an optional decimal point then digit
-                sscanf(Buffer, "V%f",newVelocity);
-                uint32_t speedMaxInt = uint32_t (newVelocity*10);
-                makeMessage(10,speedMaxInt);
+           buffer_index = 0;
+      
+           switch(Buffer[0]){
+                case 'K':
+                    newkey_mutex.lock();
+                    sscanf(Buffer, "K%x", &newKey);
+                    //Print the whole Key - since it's 32 bits each so send in two bits 
+                    newkey_mutex.unlock();
+                    makeMessage(6,newKey >> 32);
+                    makeMessage(7,newKey);
+                    break;
+                case 'T':
+                    sscanf(Buffer, "T%u", &pwm_width);
+                    motor.pulsewidth_us(pwm_width);
+                    makeMessage(5,pwm_width);
+                    break;
+                case 'V':
+                    //V\d{1,3}(\.\d)?
+                    //matches V, followed by 1-3 digits, followed by an optional decimal point then digit
+                    sscanf(Buffer, "V%f",&newVelocity);
+                    speedMaxInt = newVelocity;
+                    makeMessage(10,speedMaxInt);
+                case 'R':
+                    //matches Rotational Speed, followed by 1-3 digits, followed by an optional decimal point then digit
+                    sscanf(Buffer, "R%f", &rotations);
+                    makeMessage(11, rotations);
+                    break;
+                default:
+                    break;
 
-        }
+            }
+            
+       }
        
 
     }
@@ -364,8 +414,9 @@ void output_message(){
                 pc.printf("========================= Input Thread ON! ===========================\n\r");
                 break;
             case 5:
-                pc.printf("New Character inputted: %c\n\r", o_message->data);
+                pc.printf("Torque Changed %u\n\r", o_message->data);
                 break;
+            //Both for printing the key    
             case 6:
                 pc.printf("New Key: %x", o_message->data);
                 break;
@@ -373,13 +424,20 @@ void output_message(){
                 pc.printf("%x\n\r", o_message->data);
                 break;
             case 8:
-                pc.printf("Motor Position%u\n\r", motor_position);
+                pc.printf("Motor Position%d\n\r", motor_position);
                 break;
             case 9:
-                pc.printf("Motor Velocity%u\n\r", o_message->data);
+                pc.printf("Motor Velocity%d\n\r", o_message->data);
                 break;
             case 10:
-                pc.printf("New Motor Velocity %u\n\r",o_message->data)
+                pc.printf("New Motor Velocity %u\n\r",o_message->data);
+                break;
+            case 12:
+                pc.printf("Current PWM value %u\n\r",o_message->data);
+                break;
+            case 11:
+                pc.printf("New Motor Rotational Speed %u\n\r",o_message->data);
+                break;
             default:
                 pc.printf("======================Unexpected Input!====================");
                     break;
@@ -416,14 +474,13 @@ int main() {
     
     pc.attach(&serialISR);
     
-    //incoming_message_thread.start(incoming_message);
-//    bitcoin_thread.start(bitcoin_gen);
+    incoming_message_thread.start(incoming_message);
+    //bitcoin_thread.start(bitcoin_gen);
     recieve_message_t.start(output_message);
     motorCtrlT.start(motorCtrl);
     
-    motor.period_ms(2);
-    motor.pulsewidth_ms(2);
-
+    motor.period_us(pwm);
+    motor.pulsewidth_us(pwm_width);
     
 }
 
