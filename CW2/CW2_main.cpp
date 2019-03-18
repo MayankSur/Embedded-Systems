@@ -77,7 +77,7 @@ Thread motorCtrlT(osPriorityNormal, 1024);
 //Declaring the structure for messages
 typedef struct {
   uint8_t    code; /* AD result of measured voltage */
-  uint32_t data; /* A counter value               */
+  int32_t data; /* A counter value               */
 } message_t;
 
 //Start to design the mailbox
@@ -94,8 +94,9 @@ Mutex newkey_mutex;
 
 RawSerial pc(SERIAL_TX, SERIAL_RX);
 Queue<void, 8> inCharQ;
-
-
+//Value for speed max to be set via input
+//value is abc.c, needs to be a float
+volatile float newVelocity = 0; //10 times the desired value
 
 
 ////////////Controling the motor PWM ACTIVATE ////////////////
@@ -240,8 +241,13 @@ void incoming_message(){
             case 'T':
                 makeMessage(5, newChar);
                 break;
-        
-        
+			case 'V':
+				//V\d{1,3}(\.\d)?
+                //matches V, followed by 1-3 digits, followed by an optional decimal point then digit
+                sscanf(Buffer, "V%f",newVelocity);
+                uint32_t speedMaxInt = uint32_t (newVelocity*10);
+                makeMessage(10,speedMaxInt);
+
         }
        
 
@@ -329,7 +335,7 @@ void bitcoin_gen(){
 
 
 //Create a function that allocates space for a message on the mail box
-void makeMessage(uint8_t code, uint32_t data){
+void makeMessage(uint8_t code, int32_t data){
     message_t *message = out_message.alloc();
     message->code = code;
     message->data = data;
@@ -372,6 +378,8 @@ void output_message(){
             case 9:
                 pc.printf("Motor Velocity%u\n\r", o_message->data);
                 break;
+            case 10:
+                pc.printf("New Motor Velocity %u\n\r",o_message->data)
             default:
                 pc.printf("======================Unexpected Input!====================");
                     break;
