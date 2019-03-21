@@ -1,8 +1,9 @@
 #include "mbed.h"
 #include "SHA256.h"
+#include "CW2_output.hpp"
 #include "CW2_input.hpp"
 #include "CW2_bitcoin.hpp"
-#include "CW2_output.hpp"
+
 
 
 
@@ -79,14 +80,8 @@ Thread recieve_message_t (osPriorityAboveNormal, 1024);;
 Thread motorCtrlT(osPriorityNormal, 1024);
 
 
-//Declaring the structure for messages
-typedef struct {
-  uint8_t    code; /* AD result of measured voltage */
-  int32_t data; /* A counter value               */
-} message_t;
 
-//Start to design the mailbox
-Mail<message_t, 16> out_message;
+
 
 
 //Value for speed max to be set via input
@@ -125,7 +120,7 @@ float speedMaxInt = 0;
 bool velEnter = false;
 bool rotEnter = false;
 
-float error;
+float error_2;
 float torque;
 
 float error_term;
@@ -197,7 +192,7 @@ int output = 0;
 int velocityControl(){
         output = 0;
         // Error term
-        error = speedMaxInt - abs(velocity)
+        error_2 = speedMaxInt - abs(velocity);
         
         //Case for speed entered being 0 - Set speed to maximum
         
@@ -208,14 +203,14 @@ int velocityControl(){
             }
             
         sign = (velocity<0) ? -1 : 1;  
-        integral_error += K_IS*((error));
+        integral_error += K_IS*((error_2));
         
         if(integral_error > 600) integral_error = 600;
         if(integral_error < (-600)) integral_error =-600;
         makeMessage(14, integral_error);
                    
       //Set e_s then set kp then torque
-        torque = (K_PS*(error) + integral_error) * sign;
+        torque = (K_PS*(error_2) + integral_error) * sign;
 
         //Check for positive/negative lead
         //Sets the lead based on the maximum speed inputted

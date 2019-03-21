@@ -11,7 +11,10 @@ extern float pwm_width;
 extern int motor_position;
 extern float rotations;
 extern float speedMaxInt; 
-
+extern RawSerial pc;
+extern PwmOut motor;
+extern bool velEnter;
+extern bool rotEnter;
 /////////////////////// EVERYTHING TO DO WITH INPUT ////////////
 
 
@@ -19,7 +22,7 @@ extern float speedMaxInt;
 char Buffer[20];
 int buffer_index = 0;
 
-RawSerial pc(SERIAL_TX, SERIAL_RX);
+
 Queue<void, 8> inCharQ;
 
 //New Key MUTEX Variable and NewKey variable

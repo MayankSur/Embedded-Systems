@@ -2,7 +2,7 @@
 #define CW2_bitcoin_hpp
 
 #include "CW2_output.hpp"
-
+#include "CW2_bitcoin.hpp"
 
 extern uint64_t newKey;
 extern Mutex newkey_mutex;

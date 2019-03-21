@@ -2,13 +2,25 @@
 #define CW2_output_hpp
 
 
+
+
 ////EXTERNAL GLOBALS
 
 extern int motor_position;
 
 
-/////////////////////// EVERYTHING TO DO WITH OUTPUT MESSAGES ////////////
+//Declaring the structure for messages
+typedef struct {
+  uint8_t    code; /* AD result of measured voltage */
+  int32_t data; /* A counter value               */
+} message_t;
 
+
+//Start to design the mailbox
+Mail<message_t, 16> out_message;
+
+/////////////////////// EVERYTHING TO DO WITH OUTPUT MESSAGES ////////////
+RawSerial pc(SERIAL_TX, SERIAL_RX);
 
 //Create a function that allocates space for a message on the mail box
 void makeMessage(uint8_t code, int32_t data){
