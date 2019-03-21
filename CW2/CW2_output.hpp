@@ -1,6 +1,12 @@
 #ifndef CW2_output_hpp
 #define CW2_output_hpp
 
+
+////EXTERNAL GLOBALS
+
+extern int motor_position;
+
+
 /////////////////////// EVERYTHING TO DO WITH OUTPUT MESSAGES ////////////
 
 

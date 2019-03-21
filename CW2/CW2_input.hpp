@@ -1,6 +1,17 @@
 #ifndef CW2_input_hpp
 #define CW2_input_hpp
 
+#include "CW2_output.hpp"
+
+
+//////EXTERNAL GLOBALS//////////
+
+extern volatile float newVelocity;
+extern float pwm_width;
+extern int motor_position;
+extern float rotations;
+extern float speedMaxInt; 
+
 /////////////////////// EVERYTHING TO DO WITH INPUT ////////////
 
 

@@ -1,8 +1,11 @@
 #include "mbed.h"
 #include "SHA256.h"
+#include "CW2_input.hpp"
 #include "CW2_bitcoin.hpp"
 #include "CW2_output.hpp"
-#include "CW2_input.hpp"
+
+
+
 //Photointerrupter input pins
 #define I1pin D3
 #define I2pin D6
