@@ -96,21 +96,39 @@ PwmOut motor(PWMpin);
 
 int motor_position = 0;
 uint8_t previous_state = 0 ;
-int velocity = 0;
+float velocity = 0;
+float prev_velocity;
 int lastPosition = 0;
 uint32_t orState = 0;
+int8_t sign;
 
 int pwm = 2000;
 float pwm_width = 2000;
 
 
 //These need to be set by the user
-float rotations;
-float speedMaxInt = 1000;
+float rotations = 0;
+float speedMaxInt = 0;
 
-uint8_t k_ps = 15;
-float e_s;
+#define K_PS 8.0
+#define K_IS 10.0
+#define K_PR 30.0
+#define K_DR 38.0
+#define PWM_LIMIT 2000.0
+
+
+bool velEnter = false;
+bool rotEnter = false;
+
+float error;
 float torque;
+
+float error_term;
+float diff_error = 0;
+float previous_error = 0;
+float integral_error = 0;
+
+float v,r;
 
 
 //////////////////////////////////////////////////////////////
@@ -170,7 +188,60 @@ void motorCtrlTick(){
     //Sets a signal for the thread
     motorCtrlT.signal_set(0x1);
     }
+int output = 0;
+int velocityControl(){
+        output = 0;
+        // Error term
+        error = speedMaxInt - abs(velocity)
+        
+        //Case for speed entered being 0 - Set speed to maximum
+        
+        if (speedMaxInt == 0){
+            //Full power 
+            output = 2000;
+            return output;
+            }
+            
+        sign = (velocity<0) ? -1 : 1;  
+        integral_error += K_IS*((error));
+        
+        if(integral_error > 600) integral_error = 600;
+        if(integral_error < (-600)) integral_error =-600;
+        makeMessage(14, integral_error);
+                   
+      //Set e_s then set kp then torque
+        torque = (K_PS*(error) + integral_error) * sign;
 
+        //Check for positive/negative lead
+        //Sets the lead based on the maximum speed inputted
+        lead = (torque <0) ? -2: 2;
+        
+        //Output for PWM
+        output = (abs(torque) < 4000) ? (torque/2) : 2000;
+        return output;
+
+    }
+    
+    
+int rotationControl(){
+    error_term = rotations - (float(motor_position)/6);  
+      
+    diff_error = error_term - previous_error; 
+    //Check this 
+    integral_error = (error_term + previous_error)/2;
+    
+    previous_error = error_term;
+    
+    output = (K_PR*error_term) + (K_DR*diff_error);
+    
+    lead = (output <0) ? -2: 2;
+    
+    output = (abs(output) < 4000) ? (output/2) : 2000;
+    
+    return abs(output);
+    
+    }
+    
 
 void motorCtrl(){
     //Creates a ticker to be used to triggere interrupts in a timed interval
@@ -183,44 +254,42 @@ void motorCtrl(){
         
         //Potential may need to use critical region for this calculation
         
-       // //putMessage(4, velocity);
         if(i < 10){
             i++;
         }else{
             i = 0;
-            //calculation for velocity + Critcal Section used since the value of motor position can change due to an intterupt
-            core_util_critical_section_enter();
-            velocity = (motor_position - lastPosition)*10;
-            core_util_critical_section_exit();
             //Outputs the velocity and motor position every 10 iterations 
             makeMessage(9, velocity);
+
             if (velocity == 0){
                 pwm_width = 2000;
                 }
             makeMessage(8, motor_position);
+            
         //Needs to be done last
         }
-        
-        
-        //Set e_s then set kp then torque
-        e_s = speedMaxInt - abs(velocity);
-        torque = (k_ps* e_s);
-                
-        //Check for positive/negative lead
-        
-        if (torque <0) {lead = -2;}
-        else {lead =2;}
-        
-        //Sets the value for pwm_width based on the 
-        if (torque > 1) pwm_width = 2000;
-        if (torque < -1) pwm_width = 2000; 
-        else  pwm_width = abs((2000*torque));
+ //calculation for velocity + Critcal Section used since the value of motor position can change due to an intterupt
+        core_util_critical_section_enter();
+        velocity = (motor_position - lastPosition)*10;
+        core_util_critical_section_exit();
+        prev_velocity = velocity;
+        //Need to call motor velocity 
+        if (velEnter){
+        pwm_width = velocityControl();
+        }
+        if (rotEnter){
+        pwm_width = rotationControl();
+        }
+        else if(velEnter&& rotEnter) {
+        v = velocityControl();
+        r = rotationControl();
+        pwm_width =(velocity >= 0) ? min(r, v) : max(r, v);
+          }
+
         
         lastPosition = motor_position;
         }
     }
-
-
 /////////////////////// EVERYTHING TO DO WITH INPUT ////////////
 
 
@@ -283,15 +352,22 @@ void incoming_message(){
                     makeMessage(5,pwm_width);
                     break;
                 case 'V':
-                    //V\d{1,3}(\.\d)?
                     //matches V, followed by 1-3 digits, followed by an optional decimal point then digit
                     sscanf(Buffer, "V%f",&newVelocity);
                     speedMaxInt = newVelocity;
+                    velEnter = true;
                     makeMessage(10,speedMaxInt);
+                    break;
                 case 'R':
                     //matches Rotational Speed, followed by 1-3 digits, followed by an optional decimal point then digit
                     sscanf(Buffer, "R%f", &rotations);
-                    makeMessage(11, rotations);
+                    //Sets the number of rotations extra
+                    rotations += float(motor_position)/6;
+                    rotEnter = true;
+                    
+                    //used to test the position of the rotation
+//                    makeMessage(11, rotations);
+//                    makeMessage(8, motor_position);
                     break;
                 default:
                     break;
@@ -354,7 +430,7 @@ void bitcoin_gen(){
     if ((hash[0] == 0) && hash[1] == 0){
         //pc.printf("Nonce Found: %x\n\r", *nonce);
         //Replacing with makemessage function
-        //makeMessage(1, *nonce);
+        makeMessage(1, *nonce);
         nonce_count++;
         }
     *nonce += 1;
@@ -371,7 +447,7 @@ void bitcoin_gen(){
         previous_time = current_time;
 
         //pc.printf("Hash Rate : %d\n\r", hash_count);
-        //makeMessage(2, hash_count);
+        makeMessage(2, hash_count);
         hash_count = 0;
     }
     }
@@ -430,13 +506,19 @@ void output_message(){
                 pc.printf("Motor Velocity%d\n\r", o_message->data);
                 break;
             case 10:
-                pc.printf("New Motor Velocity %u\n\r",o_message->data);
+                pc.printf("New Motor Velocity %d\n\r",o_message->data);
                 break;
             case 12:
                 pc.printf("Current PWM value %u\n\r",o_message->data);
                 break;
             case 11:
-                pc.printf("New Motor Rotational Speed %u\n\r",o_message->data);
+                pc.printf("No. Rotations %d\n\r",o_message->data);
+                break;
+            case 13:
+                pc.printf("New Torque %d\n\r",o_message->data);
+                break;
+            case 14:
+                pc.printf("New Integral %d\n\r",o_message->data);
                 break;
             default:
                 pc.printf("======================Unexpected Input!====================");
@@ -459,9 +541,7 @@ int main() {
     orState = motorHome();
     makeMessage(3, orState);
     //orState is subtracted from future rotor state inputs to align rotor and motor states
- 
-    
-    
+
     //Poll the rotor state and set the motor outputs accordingly to spin the motor
     // Improved the rotor by creating 3 interrupts for each of the positions.
     I1.rise(&motor_pos);
