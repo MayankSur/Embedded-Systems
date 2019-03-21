@@ -109,9 +109,12 @@ float pwm_width = 2000;
 //These need to be set by the user
 float rotations = 0;
 float speedMaxInt = 0;
-
+int R_O;
+//SPEED
 #define K_PS 8.0
-#define K_IS 10.0
+#define K_IS 10.5
+
+//ROTATION
 #define K_PR 30.0
 #define K_DR 38.0
 #define PWM_LIMIT 2000.0
@@ -120,7 +123,7 @@ float speedMaxInt = 0;
 bool velEnter = false;
 bool rotEnter = false;
 
-float error;
+float error_speed;
 float torque;
 
 float error_term;
@@ -163,9 +166,9 @@ inline int8_t readRotorState(){
 
 //Basic synchronisation routine    
 int8_t motorHome() {
-    //Put the motor in drive state 0 and wait for it to stabilise
-    motorOut(0);
-    wait(2.0);
+    //Put the motor in drive state 2 and wait for it to stabilise
+    motorOut(2);
+    wait(3.0);
     
     //Get the rotor state
     return readRotorState();
@@ -192,37 +195,31 @@ int output = 0;
 int velocityControl(){
         output = 0;
         // Error term
-        error = speedMaxInt - abs(velocity)
-        
-        //Case for speed entered being 0 - Set speed to maximum
-        
-        if (speedMaxInt == 0){
-            //Full power 
-            output = 2000;
-            return output;
-            }
-            
-        sign = (velocity<0) ? -1 : 1;  
-        integral_error += K_IS*((error));
-        
-        if(integral_error > 600) integral_error = 600;
-        if(integral_error < (-600)) integral_error =-600;
-        makeMessage(14, integral_error);
-                   
-      //Set e_s then set kp then torque
-        torque = (K_PS*(error) + integral_error) * sign;
+        error_speed = speedMaxInt - abs(velocity);
 
-        //Check for positive/negative lead
-        //Sets the lead based on the maximum speed inputted
-        lead = (torque <0) ? -2: 2;
+        //Sign Calculation
+        sign = (velocity<0) ? -1 : 1;  
         
+                
+        //Only consider the integral part when close to the target velocity
+        if (error_speed < 0.15*speedMaxInt){
+            //Integral Calculation
+             integral_error += ((error_speed));
+            if((integral_error > 15)){ integral_error = 15;}
+            if((integral_error < -15)){ integral_error = -15;}
+        }
+                
+      //Set e_s then set kp then torque
+        torque = (K_PS*(error_speed) +  (K_IS*integral_error))* sign;
+        //Check for positive/negative lead
+        lead = (torque <0) ? -2: 2;
+
         //Output for PWM
-        output = (abs(torque) < 4000) ? (torque/2) : 2000;
-        return output;
+        output = (abs(torque) < 2000) ? (torque) : 2000;
+        return abs(output);
 
     }
-    
-    
+       
 int rotationControl(){
     error_term = rotations - (float(motor_position)/6);  
       
@@ -259,11 +256,9 @@ void motorCtrl(){
         }else{
             i = 0;
             //Outputs the velocity and motor position every 10 iterations 
+                  
+            //makeMessage(13, integral_error);
             makeMessage(9, velocity);
-
-            if (velocity == 0){
-                pwm_width = 2000;
-                }
             makeMessage(8, motor_position);
             
         //Needs to be done last
@@ -275,18 +270,27 @@ void motorCtrl(){
         prev_velocity = velocity;
         //Need to call motor velocity 
         if (velEnter){
+            if (speedMaxInt == 0){
+                pwm_width = 2000;
+            }
+            else{
         pwm_width = velocityControl();
         }
+        }
         if (rotEnter){
-        pwm_width = rotationControl();
+            if (R_O == 0){
+            lead = 2;
+            }
+            else{
+            pwm_width = rotationControl();
+            }
         }
         else if(velEnter&& rotEnter) {
-        v = velocityControl();
-        r = rotationControl();
-        pwm_width =(velocity >= 0) ? min(r, v) : max(r, v);
+            v = velocityControl();
+            r = rotationControl();
+            pwm_width =(velocity >= 0) ? min(r, v) : max(r, v);
           }
 
-        
         lastPosition = motor_position;
         }
     }
@@ -328,7 +332,6 @@ void incoming_message(){
             buffer_index++;
        }
 
-       
        //Need to deal with the new line character
        // Indicates end of commands
        if (newChar == '\r'){
@@ -355,15 +358,18 @@ void incoming_message(){
                     //matches V, followed by 1-3 digits, followed by an optional decimal point then digit
                     sscanf(Buffer, "V%f",&newVelocity);
                     speedMaxInt = newVelocity;
+                    integral_error= 0;
                     velEnter = true;
                     makeMessage(10,speedMaxInt);
                     break;
                 case 'R':
                     //matches Rotational Speed, followed by 1-3 digits, followed by an optional decimal point then digit
                     sscanf(Buffer, "R%f", &rotations);
+                    R_O = rotations;
                     //Sets the number of rotations extra
                     rotations += float(motor_position)/6;
                     rotEnter = true;
+                    makeMessage(11, motor_position);
                     
                     //used to test the position of the rotation
 //                    makeMessage(11, rotations);
@@ -503,7 +509,7 @@ void output_message(){
                 pc.printf("Motor Position%d\n\r", motor_position);
                 break;
             case 9:
-                pc.printf("Motor Velocity%d\n\r", o_message->data);
+                pc.printf("Motor Velocity%d\n\r", (o_message->data)/6);
                 break;
             case 10:
                 pc.printf("New Motor Velocity %d\n\r",o_message->data);
