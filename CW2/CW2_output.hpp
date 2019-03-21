@@ -2,12 +2,13 @@
 #define CW2_output_hpp
 
 
+RawSerial pc(SERIAL_TX, SERIAL_RX);
 
-
-////EXTERNAL GLOBALS
-
+//Externals
 extern int motor_position;
 
+
+/////////////////////// EVERYTHING TO DO WITH OUTPUT MESSAGES ////////////
 
 //Declaring the structure for messages
 typedef struct {
@@ -15,12 +16,9 @@ typedef struct {
   int32_t data; /* A counter value               */
 } message_t;
 
-
 //Start to design the mailbox
 Mail<message_t, 16> out_message;
 
-/////////////////////// EVERYTHING TO DO WITH OUTPUT MESSAGES ////////////
-RawSerial pc(SERIAL_TX, SERIAL_RX);
 
 //Create a function that allocates space for a message on the mail box
 void makeMessage(uint8_t code, int32_t data){
@@ -65,7 +63,7 @@ void output_message(){
                 pc.printf("Motor Position%d\n\r", motor_position);
                 break;
             case 9:
-                pc.printf("Motor Velocity%d\n\r", o_message->data);
+                pc.printf("Motor Velocity%d\n\r", (o_message->data)/6);
                 break;
             case 10:
                 pc.printf("New Motor Velocity %d\n\r",o_message->data);

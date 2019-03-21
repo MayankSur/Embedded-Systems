@@ -1,12 +1,9 @@
 #ifndef CW2_motor_hpp
 #define CW2_motor_hpp
 
-#include "mbed.h"
-#include "CW2_output.hpp"
 
-//external
+
 extern Thread motorCtrlT;
-
 //Photointerrupter input pins
 #define I1pin D3
 #define I2pin D6
@@ -67,9 +64,8 @@ DigitalOut L2L(L2Lpin);
 DigitalOut L2H(L2Hpin);
 DigitalOut L3L(L3Lpin);
 DigitalOut L3H(L3Hpin);
-//These need to be set by the user
-float rotations = 0;
-float speedMaxInt = 0;
+
+////////////Controling the motor PWM ACTIVATE ////////////////
 
 //Define a PWMOut Class
 PwmOut motor(PWMpin);
@@ -85,8 +81,16 @@ int8_t sign;
 int pwm = 2000;
 float pwm_width = 2000;
 
+
+//These need to be set by the user
+float rotations = 0;
+float speedMaxInt = 0;
+int R_O;
+//SPEED
 #define K_PS 8.0
-#define K_IS 10.0
+#define K_IS 10.5
+
+//ROTATION
 #define K_PR 30.0
 #define K_DR 38.0
 #define PWM_LIMIT 2000.0
@@ -95,7 +99,7 @@ float pwm_width = 2000;
 bool velEnter = false;
 bool rotEnter = false;
 
-float error_2;
+float error_speed;
 float torque;
 
 float error_term;
@@ -138,9 +142,9 @@ inline int8_t readRotorState(){
 
 //Basic synchronisation routine    
 int8_t motorHome() {
-    //Put the motor in drive state 0 and wait for it to stabilise
-    motorOut(0);
-    wait(2.0);
+    //Put the motor in drive state 2 and wait for it to stabilise
+    motorOut(2);
+    wait(3.0);
     
     //Get the rotor state
     return readRotorState();
@@ -167,37 +171,31 @@ int output = 0;
 int velocityControl(){
         output = 0;
         // Error term
-        error_2 = speedMaxInt - abs(velocity);
-        
-        //Case for speed entered being 0 - Set speed to maximum
-        
-        if (speedMaxInt == 0){
-            //Full power 
-            output = 2000;
-            return output;
-            }
-            
-        sign = (velocity<0) ? -1 : 1;  
-        integral_error += K_IS*((error_2));
-        
-        if(integral_error > 600) integral_error = 600;
-        if(integral_error < (-600)) integral_error =-600;
-        makeMessage(14, integral_error);
-                   
-      //Set e_s then set kp then torque
-        torque = (K_PS*(error_2) + integral_error) * sign;
+        error_speed = speedMaxInt - abs(velocity);
 
-        //Check for positive/negative lead
-        //Sets the lead based on the maximum speed inputted
-        lead = (torque <0) ? -2: 2;
+        //Sign Calculation
+        sign = (velocity<0) ? -1 : 1;  
         
+                
+        //Only consider the integral part when close to the target velocity
+        if (error_speed < 0.15*speedMaxInt){
+            //Integral Calculation
+             integral_error += ((error_speed));
+            if((integral_error > 15)){ integral_error = 15;}
+            if((integral_error < -15)){ integral_error = -15;}
+        }
+                
+      //Set e_s then set kp then torque
+        torque = (K_PS*(error_speed) +  (K_IS*integral_error))* sign;
+        //Check for positive/negative lead
+        lead = (torque <0) ? -2: 2;
+
         //Output for PWM
-        output = (abs(torque) < 4000) ? (torque/2) : 2000;
-        return output;
+        output = (abs(torque) < 2000) ? (torque) : 2000;
+        return abs(output);
 
     }
-    
-    
+       
 int rotationControl(){
     error_term = rotations - (float(motor_position)/6);  
       
@@ -234,11 +232,9 @@ void motorCtrl(){
         }else{
             i = 0;
             //Outputs the velocity and motor position every 10 iterations 
+                  
+            //makeMessage(13, integral_error);
             makeMessage(9, velocity);
-
-            if (velocity == 0){
-                pwm_width = 2000;
-                }
             makeMessage(8, motor_position);
             
         //Needs to be done last
@@ -250,18 +246,27 @@ void motorCtrl(){
         prev_velocity = velocity;
         //Need to call motor velocity 
         if (velEnter){
+            if (speedMaxInt == 0){
+                pwm_width = 2000;
+            }
+            else{
         pwm_width = velocityControl();
         }
+        }
         if (rotEnter){
-        pwm_width = rotationControl();
+            if (R_O == 0){
+            lead = 2;
+            }
+            else{
+            pwm_width = rotationControl();
+            }
         }
         else if(velEnter&& rotEnter) {
-        v = velocityControl();
-        r = rotationControl();
-        pwm_width =(velocity >= 0) ? min(r, v) : max(r, v);
+            v = velocityControl();
+            r = rotationControl();
+            pwm_width =(velocity >= 0) ? min(r, v) : max(r, v);
           }
 
-        
         lastPosition = motor_position;
         }
     }

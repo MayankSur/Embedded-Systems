@@ -1,15 +1,16 @@
 #ifndef CW2_bitcoin_hpp
 #define CW2_bitcoin_hpp
 
+
 #include "CW2_output.hpp"
-#include "CW2_bitcoin.hpp"
+///EXTERNALS
 
 extern uint64_t newKey;
 extern Mutex newkey_mutex;
 
+
+
 /////////////////////// EVERYTHING TO DO WITH BITCOIN MINING ////////////
-
-
 
 
 //Variables needed for the BitCoin
