@@ -23,8 +23,6 @@ Thread motorCtrlT(osPriorityNormal, 1024);
 //value is abc.c, needs to be a float
 volatile float newVelocity = 0; //10 times the desired value
 
-
-   
 //Main
 int main() {
 

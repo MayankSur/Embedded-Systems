@@ -7,6 +7,8 @@ RawSerial pc(SERIAL_TX, SERIAL_RX);
 //Externals
 extern int motor_position;
 
+//Digital port created for testing via oscilloscope
+DigitalOut test(D13);
 
 /////////////////////// EVERYTHING TO DO WITH OUTPUT MESSAGES ////////////
 
@@ -30,6 +32,7 @@ void makeMessage(uint8_t code, int32_t data){
 
 void output_message(){
     while(1){
+        //test.write(1);
         osEvent evt = out_message.get();
         message_t *o_message = (message_t*)evt.value.p;
             
@@ -45,40 +48,24 @@ void output_message(){
                 break;
             case 3:
                 pc.printf("Rotor origin: %x\n\r", o_message->data);
-                break;
+                break;   
             case 4:
-                pc.printf("========================= Input Thread ON! ===========================\n\r");
-                break;
-            case 5:
-                pc.printf("Torque Changed %u\n\r", o_message->data);
-                break;
-            //Both for printing the key    
-            case 6:
                 pc.printf("New Key: %x", o_message->data);
                 break;
-            case 7:
+            case 5:
                 pc.printf("%x\n\r", o_message->data);
                 break;
+            case 6:
+                pc.printf("Motor Position %d\n\r ", motor_position);
+                break;
+            case 7:
+                pc.printf("Revolutions %d ps\n\r", abs((o_message->data)/6));
+                break;
             case 8:
-                pc.printf("Motor Position%d\n\r", motor_position);
-                break;
-            case 9:
-                pc.printf("Motor Velocity%d\n\r", (o_message->data)/6);
-                break;
-            case 10:
                 pc.printf("New Motor Velocity %d\n\r",o_message->data);
                 break;
-            case 12:
-                pc.printf("Current PWM value %u\n\r",o_message->data);
-                break;
-            case 11:
+            case 9:
                 pc.printf("No. Rotations %d\n\r",o_message->data);
-                break;
-            case 13:
-                pc.printf("New Torque %d\n\r",o_message->data);
-                break;
-            case 14:
-                pc.printf("New Integral %d\n\r",o_message->data);
                 break;
             default:
                 pc.printf("======================Unexpected Input!====================");
@@ -86,6 +73,8 @@ void output_message(){
             
         }
         out_message.free(o_message);
+               //test.write(0);
+       
         }
     }
 

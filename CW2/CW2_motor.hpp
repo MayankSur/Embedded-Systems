@@ -65,17 +65,17 @@ DigitalOut L2H(L2Hpin);
 DigitalOut L3L(L3Lpin);
 DigitalOut L3H(L3Hpin);
 
+
 ////////////Controling the motor PWM ACTIVATE ////////////////
 
 //Define a PWMOut Class
 PwmOut motor(PWMpin);
 
 int motor_position = 0;
-uint8_t previous_state = 0 ;
+uint8_t previous_state = 1 ;
 float velocity = 0;
-float prev_velocity;
 int lastPosition = 0;
-uint32_t orState = 0;
+uint8_t orState = 0;
 int8_t sign;
 
 int pwm = 2000;
@@ -86,13 +86,16 @@ float pwm_width = 2000;
 float rotations = 0;
 float speedMaxInt = 0;
 int R_O;
+
+
+
 //SPEED
-#define K_PS 8.0
-#define K_IS 10.5
+#define K_PS 8.8
+#define K_IS 9.2
 
 //ROTATION
-#define K_PR 30.0
-#define K_DR 38.0
+#define K_PR 40.0
+#define K_DR 50.0
 #define PWM_LIMIT 2000.0
 
 
@@ -142,8 +145,9 @@ inline int8_t readRotorState(){
 
 //Basic synchronisation routine    
 int8_t motorHome() {
+    int8_t intState = readRotorState();
     //Put the motor in drive state 2 and wait for it to stabilise
-    motorOut(2);
+    motorOut(0);
     wait(3.0);
     
     //Get the rotor state
@@ -153,6 +157,7 @@ int8_t motorHome() {
  //Upgrade motor_pos to work for the Motor ISR 
 void motor_pos(){
     //Base position
+
     int8_t intState = readRotorState();
     motorOut((intState-orState+lead+6)%6); //+6 to make sure the remainder is positive
     
@@ -161,6 +166,7 @@ void motor_pos(){
     else if (intState - previous_state == -5) motor_position++;
     else motor_position += (intState - previous_state);
     previous_state = intState;
+  
 }
 
 void motorCtrlTick(){
@@ -171,9 +177,8 @@ int output = 0;
 int velocityControl(){
         output = 0;
         // Error term
-        error_speed = speedMaxInt - abs(velocity);
-
-        //Sign Calculation
+        
+                //Sign Calculation
         sign = (velocity<0) ? -1 : 1;  
         
                 
@@ -224,7 +229,7 @@ void motorCtrl(){
     int i = 0;
     while(1){
         motorCtrlT.signal_wait(0x1);
-        
+               
         //Potential may need to use critical region for this calculation
         
         if(i < 10){
@@ -232,28 +237,26 @@ void motorCtrl(){
         }else{
             i = 0;
             //Outputs the velocity and motor position every 10 iterations 
-                  
-            //makeMessage(13, integral_error);
-            makeMessage(9, velocity);
-            makeMessage(8, motor_position);
+
+            makeMessage(6, motor_position);
+            makeMessage(7, velocity);
             
-        //Needs to be done last
         }
  //calculation for velocity + Critcal Section used since the value of motor position can change due to an intterupt
         core_util_critical_section_enter();
         velocity = (motor_position - lastPosition)*10;
+        error_speed = speedMaxInt - abs(velocity);
         core_util_critical_section_exit();
-        prev_velocity = velocity;
         //Need to call motor velocity 
         if (velEnter){
             if (speedMaxInt == 0){
                 pwm_width = 2000;
             }
             else{
-        pwm_width = velocityControl();
+            pwm_width = velocityControl();
         }
         }
-        if (rotEnter){
+        else if (rotEnter){
             if (R_O == 0){
             lead = 2;
             }
@@ -261,12 +264,11 @@ void motorCtrl(){
             pwm_width = rotationControl();
             }
         }
-        else if(velEnter&& rotEnter) {
+        else if( velEnter && rotEnter) {
             v = velocityControl();
             r = rotationControl();
             pwm_width =(velocity >= 0) ? min(r, v) : max(r, v);
           }
-
         lastPosition = motor_position;
         }
     }

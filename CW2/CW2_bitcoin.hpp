@@ -57,9 +57,9 @@ void bitcoin_gen(){
         SHA256::computeHash(&hash[0],&sequence[0],sizeof(sequence));
         //Searching for a nonce
         if ((hash[0] == 0) && hash[1] == 0){
-            //pc.printf("Nonce Found: %x\n\r", *nonce);
+            pc.printf("Nonce Found: %x\n\r", *nonce);
             //Replacing with makemessage function
-            makeMessage(1, *nonce);
+            //makeMessage(1, *nonce);
             nonce_count++;
             }
         *nonce += 1;
@@ -75,9 +75,9 @@ void bitcoin_gen(){
         if ((current_time - previous_time) >= 1){
             previous_time = current_time;
 
-            //pc.printf("Hash Rate : %d\n\r", hash_count);
-            makeMessage(2, hash_count);
-            hash_count = 0;
+            pc.printf("Hash Rate : %d\n\r", hash_count);
+            //makeMessage(2, hash_count);
+//            hash_count = 0;
         }
     }
 }

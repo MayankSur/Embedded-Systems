@@ -20,6 +20,9 @@ extern int R_O;
 /////////////////////// EVERYTHING TO DO WITH INPUT ////////////
 
 
+//TESTING FOR OUTPUT//
+
+
 //Character input buffer
 char Buffer[20];
 int buffer_index = 0;
@@ -38,9 +41,8 @@ void serialISR(){
 }
 
 void incoming_message(){
-    //Message to Start Input Queue
-    makeMessage(4, 0);
     while(1){
+        test.write(1);
         //Collects the Input
         osEvent newEvent = inCharQ.get();
         uint8_t newChar = (uint8_t)newEvent.value.p;
@@ -56,7 +58,6 @@ void incoming_message(){
        }
 
        //Need to deal with the new line character
-       // Indicates end of commands
        if (newChar == '\r'){
             Buffer[buffer_index] = '\0';
             //Reset for the next command
@@ -67,36 +68,31 @@ void incoming_message(){
                 case 'K':
                     newkey_mutex.lock();
                     sscanf(Buffer, "K%x", &newKey);
-                    //Print the whole Key - since it's 32 bits each so send in two bits 
                     newkey_mutex.unlock();
-                    makeMessage(6,newKey >> 32);
-                    makeMessage(7,newKey);
-                    break;
-                case 'T':
-                    sscanf(Buffer, "T%u", &pwm_width);
-                    motor.pulsewidth_us(pwm_width);
-                    makeMessage(5,pwm_width);
+                    makeMessage(4,newKey >> 32);
+                    makeMessage(5,newKey);
                     break;
                 case 'V':
                     //matches V, followed by 1-3 digits, followed by an optional decimal point then digit
                     sscanf(Buffer, "V%f",&newVelocity);
-                    speedMaxInt = newVelocity;
+                    if ((newVelocity < 999.99f) && (newVelocity > 0)){ 
+                    speedMaxInt = newVelocity*6;
                     integral_error= 0;
                     velEnter = true;
-                    makeMessage(10,speedMaxInt);
+                    makeMessage(8,speedMaxInt);
+                    }
                     break;
                 case 'R':
                     //matches Rotational Speed, followed by 1-3 digits, followed by an optional decimal point then digit
                     sscanf(Buffer, "R%f", &rotations);
                     R_O = rotations;
+                     if ((rotations < 999.99f) && (rotations > -999.99f)){ 
+
                     //Sets the number of rotations extra
                     rotations += float(motor_position)/6;
                     rotEnter = true;
-                    makeMessage(11, motor_position);
-                    
-                    //used to test the position of the rotation
-//                    makeMessage(11, rotations);
-//                    makeMessage(8, motor_position);
+                    makeMessage(9, R_O);
+                    }
                     break;
                 default:
                     break;
@@ -104,7 +100,7 @@ void incoming_message(){
             }
             
        }
-       
+
 
     }
 }
